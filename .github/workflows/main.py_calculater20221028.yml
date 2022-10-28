@@ -1,0 +1,51 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy container app to Azure Web App - calculater20221028
+
+on:
+  push:
+    branches:
+      - main.py
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: 'ubuntu-latest'
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Log in to registry
+      uses: docker/login-action@v1
+      with:
+        registry: https://mcr.microsoft.com/
+        username: ${{ secrets.AzureAppService_ContainerUsername_b86e8a1a46144fceb9ba3ec2bed14a31 }}
+        password: ${{ secrets.AzureAppService_ContainerPassword_6d26ddcd277c4eebb6115e89f112ab93 }}
+
+    - name: Build and push container image to registry
+      uses: docker/build-push-action@v2
+      with:
+        push: true
+        tags: mcr.microsoft.com/${{ secrets.AzureAppService_ContainerUsername_b86e8a1a46144fceb9ba3ec2bed14a31 }}/azure-app-service/windows/parkingpage:${{ github.sha }}
+        file: ./Dockerfile
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+
+    steps:
+    - name: Deploy to Azure Web App
+      id: deploy-to-webapp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'calculater20221028'
+        slot-name: 'production'
+        publish-profile: ${{ secrets.AzureAppService_PublishProfile_5f34e2ba729d47ee88dcf1ef3b34191f }}
+        images: 'mcr.microsoft.com/${{ secrets.AzureAppService_ContainerUsername_b86e8a1a46144fceb9ba3ec2bed14a31 }}/azure-app-service/windows/parkingpage:${{ github.sha }}'
